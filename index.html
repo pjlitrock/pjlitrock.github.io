@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 
-<!-- ✅ FIXED: proper stylesheet link -->
+<!-- ✅ FIXED: proper icon stylesheet -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.12/css/weather-icons.min.css">
 
 <style>
@@ -16,7 +16,6 @@ body {
   height:100vh;
 }
 
-/* STAGE */
 .stage {
   width:1920px;
   height:1080px;
@@ -24,7 +23,6 @@ body {
   display:flex;
   flex-direction:column;
   border:8px solid #1b3a57;
-  box-shadow:0 20px 40px rgba(0,0,0,.25);
 }
 
 /* TOP */
@@ -40,7 +38,7 @@ body {
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:94px;
+  font-size:90px;
   font-weight:700;
   color:#17324d;
 }
@@ -61,7 +59,6 @@ body {
 
 .current-header {
   font-size:28px;
-  margin-bottom:5px;
   color:#355f84;
 }
 
@@ -91,14 +88,11 @@ body {
 .current-temp {
   font-size:94px;
   font-weight:700;
-  color:#0c2b45;
-  line-height:1;
 }
 
 .current-text {
   font-size:34px;
   color:#3f6f9a;
-  margin-top:6px;
 }
 
 /* FORECAST */
@@ -112,17 +106,17 @@ body {
   border-right:6px solid #1b3a57;
   display:flex;
   flex-direction:column;
-  justify-content:space-around;
   align-items:center;
-  padding:20px 0;
+  justify-content:space-around;
 }
 
-.panel:last-child { border-right:none; }
+.panel:last-child {
+  border-right:none;
+}
 
 .period {
   font-size:62px;
   font-weight:700;
-  color:#17324d;
 }
 
 .icon {
@@ -134,23 +128,12 @@ body {
 .temp {
   font-size:62px;
   font-weight:700;
-  color:#0c2b45;
 }
 
-.footer {
-  font-size:14px;
-  text-align:center;
-  padding:6px;
-  color:#3c6b96;
-  background:#d6e6f5;
-  border-top:3px solid #1b3a57;
-}
-
-/* animation */
 @keyframes pulse {
-  0%   { transform:scale(1); opacity:0.95; }
-  50%  { transform:scale(1.05); opacity:1; }
-  100% { transform:scale(1); opacity:0.95; }
+  0% {transform:scale(1);}
+  50% {transform:scale(1.05);}
+  100% {transform:scale(1);}
 }
 </style>
 </head>
@@ -166,58 +149,74 @@ body {
 
 <div class="row" id="row"></div>
 
-<div class="footer">National Weather Service Data</div>
-
 </div>
 
 <script>
-const LAT = 41.8239;
-const LON = -71.412;
+const LAT=41.8239;
+const LON=-71.412;
 
-/* ✅ current clock time */
+/* ✅ time now */
 function getNowTime(){
-  const now = new Date();
-  let h = now.getHours();
-  const m = String(now.getMinutes()).padStart(2,"0");
-  const ampm = h >= 12 ? "PM" : "AM";
-  h = h % 12;
-  if (h === 0) h = 12;
+  const d=new Date();
+  let h=d.getHours();
+  let m=String(d.getMinutes()).padStart(2,"0");
+  let ampm=h>=12?"PM":"AM";
+  h=h%12; if(h===0) h=12;
   return `${h}:${m}${ampm}`;
 }
 
 /* ✅ observation time */
 function formatTime(str){
-  const match=str.match(/(\d{2}):(\d{2})/);
-  if(!match) return str;
-  let h=parseInt(match[1]);
-  let m=match[2];
-  const ampm = h>=12 ? "PM":"AM";
-  h = h%12;
-  if(h===0) h=12;
-  return `${h}:${m}${ampm}`;
+  let m=str.match(/(\d{2}):(\d{2})/);
+  if(!m) return str;
+  let h=parseInt(m[1]);
+  let min=m[2];
+  let ampm=h>=12?"PM":"AM";
+  h=h%12; if(h===0) h=12;
+  return `${h}:${min}${ampm}`;
 }
 
 /* ✅ day/night */
 function isDaytime(){
-  const h = new Date().getHours();
+  let h=new Date().getHours();
   return h>=6 && h<18;
 }
 
-/* ✅ icon mapping */
-function getIcon(cond,isNight){
-  const c=cond.toLowerCase();
-  if(c.includes("thunder")) return "wi-thunderstorm";
-  if(c.includes("snow")) return "wi-snow";
-  if(c.includes("rain")) return "wi-rain";
-  if(c.includes("cloud")) return isNight?"wi-night-alt-cloudy":"wi-day-cloudy";
-  if(c.includes("clear")) return isNight?"wi-night-clear":"wi-day-sunny";
-  return "wi-day-sunny";
+/* ✅ ✅ SAFE ICON LOGIC (no sun at night guaranteed) */
+function getIcon(condition,isNight){
+
+  const c = condition.toLowerCase();
+
+  // precipitation
+  if (
+    c.includes("rain") ||
+    c.includes("shower") ||
+    c.includes("drizzle") ||
+    c.includes("sprinkle")
+  ) return "wi-rain";
+
+  if (c.includes("thunder")) return "wi-thunderstorm";
+  if (c.includes("snow")) return "wi-snow";
+
+  if (c.includes("cloud"))
+    return isNight ? "wi-night-alt-cloudy" : "wi-day-cloudy";
+
+  if (c.includes("clear") || c.includes("sun"))
+    return isNight ? "wi-night-clear" : "wi-day-sunny";
+
+  if (c.includes("wind"))
+    return isNight ? "wi-night-alt-cloudy" : "wi-day-cloudy";
+
+  if (c.includes("fog"))
+    return "wi-fog";
+
+  // ✅ SAFE fallback (never sunny)
+  return isNight ? "wi-night-alt-cloudy" : "wi-day-cloudy";
 }
 
 async function load(){
 
 const url=`https://forecast.weather.gov/MapClick.php?lat=${LAT}&lon=${LON}&FcstType=json`;
-
 const data=await fetch(url).then(r=>r.json());
 
 const names=data.time.startPeriodName;
@@ -235,7 +234,7 @@ document.getElementById("current").innerHTML=`
     Conditions reported at ${formatTime(current.Date)}
   </div>
 
-  <div class="updated-time" id="updated">
+  <div class="updated-time">
     Updated ${getNowTime()}
   </div>
 
@@ -251,14 +250,16 @@ document.getElementById("current").innerHTML=`
 </div>
 `;
 
-/* ✅ FORECAST */
+/* FORECAST */
 let html="";
 
 for(let i=0;i<3;i++){
+
   const isNight=names[i].toLowerCase().includes("night");
 
   html+=`
   <div class="panel">
+
     <div class="period">${names[i]}</div>
 
     <i class="wi ${getIcon(conditions[i],isNight)} icon"></i>
@@ -266,18 +267,18 @@ for(let i=0;i<3;i++){
     <div class="temp">
       ${isNight?"Low":"High"} ${temps[i]}°
     </div>
+
   </div>`;
 }
 
 document.getElementById("row").innerHTML=html;
-
 }
 
 /* ✅ initial load */
 load();
 
 /* ✅ auto refresh every 5 minutes */
-setInterval(load, 300000);
+setInterval(load,300000);
 
 </script>
 
