@@ -24,7 +24,6 @@ body {
   border:8px solid #1b3a57;
 }
 
-/* TOP */
 .top {
   height:230px;
   display:flex;
@@ -94,7 +93,6 @@ body {
   color:#3f6f9a;
 }
 
-/* FORECAST */
 .row {
   flex:1;
   display:grid;
@@ -129,7 +127,7 @@ body {
   font-weight:700;
 }
 
-/* ✅ NEW: precipitation % */
+/* ✅ precipitation % */
 .pop {
   font-size:36px;
   font-weight:700;
@@ -162,7 +160,6 @@ body {
 const LAT=41.8239;
 const LON=-71.412;
 
-/* time */
 function getNowTime(){
   const d=new Date();
   let h=d.getHours();
@@ -187,7 +184,6 @@ function isDaytime(){
   return h>=6 && h<18;
 }
 
-/* ✅ icon logic unchanged */
 function getIcon(condition,isNight){
 
   const c = condition.toLowerCase();
@@ -221,7 +217,7 @@ const data=await fetch(url).then(r=>r.json());
 const names=data.time.startPeriodName;
 const temps=data.data.temperature;
 const conditions=data.data.weather;
-const pops=data.data.pop; // ✅ NEW
+const pops=data.data.pop || [];
 const current=data.currentobservation;
 
 const dayNow=isDaytime();
@@ -256,13 +252,19 @@ let html="";
 for(let i=0;i<3;i++){
 
   const isNight=names[i].toLowerCase().includes("night");
-  const condition=conditions[i].toLowerCase();
+  const c=conditions[i].toLowerCase();
 
-  // ✅ detect precipitation safely
   const isPrecip =
-    condition.includes("rain") ||
-    condition.includes("shower") ||
-    condition.includes("drizzle");
+    c.includes("rain") ||
+    c.includes("shower") ||
+    c.includes("drizzle");
+
+  // ✅ SAFE pop handling (this is the key fix)
+  const popValue = pops[i];
+  const showPop =
+    isPrecip &&
+    popValue !== undefined &&
+    popValue !== null;
 
   html+=`
   <div class="panel">
@@ -271,7 +273,7 @@ for(let i=0;i<3;i++){
 
     <i class="wi ${getIcon(conditions[i],isNight)} icon"></i>
 
-    ${isPrecip && pops[i] ? `<div class="pop">${pops[i]}%</div>` : ""}
+    ${showPop ? `<div class="pop">${popValue}%</div>` : ""}
 
     <div class="temp">
       ${isNight?"Low":"High"} ${temps[i]}°
@@ -283,7 +285,6 @@ for(let i=0;i<3;i++){
 document.getElementById("row").innerHTML=html;
 }
 
-/* load + refresh */
 load();
 setInterval(load,300000);
 
