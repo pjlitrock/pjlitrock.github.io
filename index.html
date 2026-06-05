@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 
-<!-- ✅ Weather Icons (correct link format) -->
+<!-- ✅ FIXED: proper stylesheet link -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.12/css/weather-icons.min.css">
 
 <style>
@@ -61,8 +61,14 @@ body {
 
 .current-header {
   font-size:28px;
-  margin-bottom:10px;
+  margin-bottom:5px;
   color:#355f84;
+}
+
+.updated-time {
+  font-size:18px;
+  color:#5a7fa6;
+  margin-bottom:10px;
 }
 
 .current-row {
@@ -76,7 +82,6 @@ body {
   color:#3f6f9a;
 }
 
-/* ✅ centered temp + condition */
 .current-text-block {
   display:flex;
   flex-direction:column;
@@ -112,9 +117,7 @@ body {
   padding:20px 0;
 }
 
-.panel:last-child {
-  border-right:none;
-}
+.panel:last-child { border-right:none; }
 
 .period {
   font-size:62px;
@@ -122,7 +125,6 @@ body {
   color:#17324d;
 }
 
-/* ✅ large panel icons + animation */
 .icon {
   font-size:250px;
   color:#3f6f9a;
@@ -144,7 +146,7 @@ body {
   border-top:3px solid #1b3a57;
 }
 
-/* ✅ subtle animation */
+/* animation */
 @keyframes pulse {
   0%   { transform:scale(1); opacity:0.95; }
   50%  { transform:scale(1.05); opacity:1; }
@@ -169,46 +171,53 @@ body {
 </div>
 
 <script>
-const LAT=41.8239;
-const LON=-71.412;
+const LAT = 41.8239;
+const LON = -71.412;
 
-/* detect day/night */
-function isDaytime(){
-  const hour=new Date().getHours();
-  return hour>=6 && hour<18;
+/* ✅ current clock time */
+function getNowTime(){
+  const now = new Date();
+  let h = now.getHours();
+  const m = String(now.getMinutes()).padStart(2,"0");
+  const ampm = h >= 12 ? "PM" : "AM";
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${h}:${m}${ampm}`;
 }
 
-/* icon mapping */
-function getIcon(condition,isNight){
-  const c=condition.toLowerCase();
+/* ✅ observation time */
+function formatTime(str){
+  const match=str.match(/(\d{2}):(\d{2})/);
+  if(!match) return str;
+  let h=parseInt(match[1]);
+  let m=match[2];
+  const ampm = h>=12 ? "PM":"AM";
+  h = h%12;
+  if(h===0) h=12;
+  return `${h}:${m}${ampm}`;
+}
 
+/* ✅ day/night */
+function isDaytime(){
+  const h = new Date().getHours();
+  return h>=6 && h<18;
+}
+
+/* ✅ icon mapping */
+function getIcon(cond,isNight){
+  const c=cond.toLowerCase();
   if(c.includes("thunder")) return "wi-thunderstorm";
   if(c.includes("snow")) return "wi-snow";
   if(c.includes("rain")) return "wi-rain";
   if(c.includes("cloud")) return isNight?"wi-night-alt-cloudy":"wi-day-cloudy";
   if(c.includes("clear")) return isNight?"wi-night-clear":"wi-day-sunny";
-
   return "wi-day-sunny";
-}
-
-/* time format */
-function formatTime(str){
-  const match=str.match(/(\d{2}):(\d{2})/);
-  if(!match) return str;
-
-  let hour=parseInt(match[1]);
-  let min=match[2];
-
-  const ampm=hour>=12?"PM":"AM";
-  hour=hour%12;
-  if(hour===0) hour=12;
-
-  return `${hour}:${min}${ampm}`;
 }
 
 async function load(){
 
 const url=`https://forecast.weather.gov/MapClick.php?lat=${LAT}&lon=${LON}&FcstType=json`;
+
 const data=await fetch(url).then(r=>r.json());
 
 const names=data.time.startPeriodName;
@@ -221,11 +230,14 @@ const dayNow=isDaytime();
 /* CURRENT */
 document.getElementById("current").innerHTML=`
 <div class="current-inner">
-<div class="current-header">
-  Current Conditions as of ${formatTime(current.Date)}
-</div>
 
-<div class="updated-time" id="updated"></div>
+  <div class="current-header">
+    Conditions reported at ${formatTime(current.Date)}
+  </div>
+
+  <div class="updated-time" id="updated">
+    Updated ${getNowTime()}
+  </div>
 
   <div class="current-row">
     <i class="wi ${getIcon(current.Weather,!dayNow)} current-icon"></i>
@@ -235,10 +247,11 @@ document.getElementById("current").innerHTML=`
       <div class="current-text">${current.Weather}</div>
     </div>
   </div>
+
 </div>
 `;
 
-/* FORECAST */
+/* ✅ FORECAST */
 let html="";
 
 for(let i=0;i<3;i++){
@@ -257,13 +270,15 @@ for(let i=0;i<3;i++){
 }
 
 document.getElementById("row").innerHTML=html;
+
 }
 
-// initial load
+/* ✅ initial load */
 load();
 
-// ✅ auto-refresh every 5 minutes
+/* ✅ auto refresh every 5 minutes */
 setInterval(load, 300000);
+
 </script>
 
 </body>
