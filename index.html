@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 
-https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.12/css/weather-icons.min.css
+<!-- ✅ FIXED: proper icon stylesheet -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.12/css/weather-icons.min.css">
 
 <style>
 body {
@@ -21,6 +22,7 @@ body {
   background:#f4f8fb;
   display:flex;
   flex-direction:column;
+  border:8px solid #1b3a57;
 }
 
 /* TOP */
@@ -28,6 +30,7 @@ body {
   height:230px;
   display:flex;
   border-bottom:6px solid #1b3a57;
+  background:linear-gradient(#e6f0f8,#d6e6f5);
 }
 
 .title {
@@ -37,6 +40,7 @@ body {
   justify-content:center;
   font-size:90px;
   font-weight:700;
+  color:#17324d;
 }
 
 .current {
@@ -44,19 +48,51 @@ body {
   display:flex;
   justify-content:flex-end;
   align-items:center;
+  padding-right:60px;
+}
+
+.current-inner {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+.current-header {
+  font-size:28px;
+  color:#355f84;
+}
+
+.updated-time {
+  font-size:18px;
+  color:#5a7fa6;
+  margin-bottom:10px;
 }
 
 .current-row {
   display:flex;
+  align-items:center;
   gap:24px;
 }
 
 .current-icon {
   font-size:110px;
+  color:#3f6f9a;
+}
+
+.current-text-block {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
 }
 
 .current-temp {
-  font-size:90px;
+  font-size:94px;
+  font-weight:700;
+}
+
+.current-text {
+  font-size:34px;
+  color:#3f6f9a;
 }
 
 /* FORECAST */
@@ -67,27 +103,37 @@ body {
 }
 
 .panel {
+  border-right:6px solid #1b3a57;
   display:flex;
   flex-direction:column;
   align-items:center;
+  justify-content:space-around;
 }
 
-.period { font-size:60px; }
+.panel:last-child {
+  border-right:none;
+}
+
+.period {
+  font-size:62px;
+  font-weight:700;
+}
 
 .icon {
   font-size:250px;
-}
-
-/* ✅ precipitation percent */
-.pop {
-  font-size:36px;
-  font-weight:700;
-  color:#2f5f8a;
-  margin-top:-20px;
+  color:#3f6f9a;
+  animation:pulse 3s ease-in-out infinite;
 }
 
 .temp {
-  font-size:60px;
+  font-size:62px;
+  font-weight:700;
+}
+
+@keyframes pulse {
+  0% {transform:scale(1);}
+  50% {transform:scale(1.05);}
+  100% {transform:scale(1);}
 }
 </style>
 </head>
@@ -106,42 +152,110 @@ body {
 </div>
 
 <script>
+const LAT=41.8239;
+const LON=-71.412;
 
+/* ✅ time now */
+function getNowTime(){
+  const d=new Date();
+  let h=d.getHours();
+  let m=String(d.getMinutes()).padStart(2,"0");
+  let ampm=h>=12?"PM":"AM";
+  h=h%12; if(h===0) h=12;
+  return `${h}:${m}${ampm}`;
+}
+
+/* ✅ observation time */
+function formatTime(str){
+  let m=str.match(/(\d{2}):(\d{2})/);
+  if(!m) return str;
+  let h=parseInt(m[1]);
+  let min=m[2];
+  let ampm=h>=12?"PM":"AM";
+  h=h%12; if(h===0) h=12;
+  return `${h}:${min}${ampm}`;
+}
+
+/* ✅ day/night */
+function isDaytime(){
+  let h=new Date().getHours();
+  return h>=6 && h<18;
+}
+
+/* ✅ ✅ SAFE ICON LOGIC (no sun at night guaranteed) */
 function getIcon(condition,isNight){
-  const c=condition.toLowerCase();
 
-  if(c.includes("rain")||c.includes("shower")) return "wi-rain";
-  if(c.includes("thunder")) return "wi-thunderstorm";
-  if(c.includes("snow")) return "wi-snow";
+  const c = condition.toLowerCase();
 
-  if(c.includes("cloud"))
-    return isNight?"wi-night-alt-cloudy":"wi-day-cloudy";
+  // precipitation
+  if (
+    c.includes("rain") ||
+    c.includes("shower") ||
+    c.includes("drizzle") ||
+    c.includes("sprinkle")
+  ) return "wi-rain";
 
-  if(c.includes("clear")||c.includes("sun"))
-    return isNight?"wi-night-clear":"wi-day-sunny";
+  if (c.includes("thunder")) return "wi-thunderstorm";
+  if (c.includes("snow")) return "wi-snow";
 
-  return isNight?"wi-night-alt-cloudy":"wi-day-cloudy";
+  if (c.includes("cloud"))
+    return isNight ? "wi-night-alt-cloudy" : "wi-day-cloudy";
+
+  if (c.includes("clear") || c.includes("sun"))
+    return isNight ? "wi-night-clear" : "wi-day-sunny";
+
+  if (c.includes("wind"))
+    return isNight ? "wi-night-alt-cloudy" : "wi-day-cloudy";
+
+  if (c.includes("fog"))
+    return "wi-fog";
+
+  // ✅ SAFE fallback (never sunny)
+  return isNight ? "wi-night-alt-cloudy" : "wi-day-cloudy";
 }
 
 async function load(){
 
-const url="https://forecast.weather.gov/MapClick.php?lat=41.8239&lon=-71.412&FcstType=json";
+const url=`https://forecast.weather.gov/MapClick.php?lat=${LAT}&lon=${LON}&FcstType=json`;
 const data=await fetch(url).then(r=>r.json());
 
 const names=data.time.startPeriodName;
 const temps=data.data.temperature;
 const conditions=data.data.weather;
-const pops=data.data.pop; // ✅ precipitation %
+const current=data.currentobservation;
 
+const dayNow=isDaytime();
+
+/* CURRENT */
+document.getElementById("current").innerHTML=`
+<div class="current-inner">
+
+  <div class="current-header">
+    Conditions reported at ${formatTime(current.Date)}
+  </div>
+
+  <div class="updated-time">
+    Updated ${getNowTime()}
+  </div>
+
+  <div class="current-row">
+    <i class="wi ${getIcon(current.Weather,!dayNow)} current-icon"></i>
+
+    <div class="current-text-block">
+      <div class="current-temp">${current.Temp}°</div>
+      <div class="current-text">${current.Weather}</div>
+    </div>
+  </div>
+
+</div>
+`;
+
+/* FORECAST */
 let html="";
 
 for(let i=0;i<3;i++){
 
   const isNight=names[i].toLowerCase().includes("night");
-
-  const isPrecip =
-    conditions[i].toLowerCase().includes("rain") ||
-    conditions[i].toLowerCase().includes("shower");
 
   html+=`
   <div class="panel">
@@ -150,14 +264,8 @@ for(let i=0;i<3;i++){
 
     <i class="wi ${getIcon(conditions[i],isNight)} icon"></i>
 
-    ${
-      isPrecip && pops[i]
-      ? `<div class="pop">${pops[i]}%</div>`
-      : ""
-    }
-
     <div class="temp">
-      ${temps[i]}°
+      ${isNight?"Low":"High"} ${temps[i]}°
     </div>
 
   </div>`;
@@ -166,9 +274,13 @@ for(let i=0;i<3;i++){
 document.getElementById("row").innerHTML=html;
 }
 
+/* ✅ initial load */
 load();
+
+/* ✅ auto refresh every 5 minutes */
 setInterval(load,300000);
 
 </script>
+
 </body>
 </html>
