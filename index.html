@@ -124,6 +124,14 @@ body {
   animation:pulse 3s ease-in-out infinite;
 }
 
+/* ✅ precipitation % */
+.pop {
+  font-size:36px;
+  font-weight:700;
+  color:#2f5f8a;
+  margin-top:-20px;
+}
+
 .temp {
   font-size:62px;
   font-weight:700;
@@ -179,7 +187,7 @@ function isDaytime(){
   return h>=6 && h<18;
 }
 
-/* ✅ SAFE icon mapping */
+/* ✅ icon mapping */
 function getIcon(condition,isNight){
 
   const c = condition.toLowerCase();
@@ -213,6 +221,7 @@ const data=await fetch(url).then(r=>r.json());
 const names=data.time.startPeriodName;
 const temps=data.data.temperature;
 const conditions=data.data.weather;
+const pops=data.data.pop || [];
 const current=data.currentobservation;
 
 const dayNow=isDaytime();
@@ -248,12 +257,21 @@ for(let i=0;i<3;i++){
 
   const isNight=names[i].toLowerCase().includes("night");
 
+  const popValue = pops[i];
+
+  const showPop =
+    popValue !== undefined &&
+    popValue !== null &&
+    popValue > 10;
+
   html+=`
   <div class="panel">
 
     <div class="period">${names[i]}</div>
 
     <i class="wi ${getIcon(conditions[i],isNight)} icon"></i>
+
+    ${showPop ? `<div class="pop">${popValue}%</div>` : ""}
 
     <div class="temp">
       ${isNight?"Low":"High"} ${temps[i]}°
@@ -270,4 +288,5 @@ load();
 setInterval(load,300000);
 </script>
 
-</body
+</body>
+</html>
