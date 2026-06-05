@@ -257,7 +257,11 @@ for(let i=0;i<3;i++){
 document.getElementById("row").innerHTML=html;
 }
 
+// initial load
 load();
+
+// ✅ auto-refresh every 5 minutes
+setInterval(load, 300000);
 </script>
 
 </body>
