@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8">
 
-<!-- Weather Icons only used for the current conditions icon -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/weather-icons/2.0.12/css/weather-icons.min.css">
 
 <style>
@@ -88,13 +87,11 @@ body {
 .current-temp {
   font-size:94px;
   font-weight:700;
-  line-height:1;
 }
 
 .current-text {
   font-size:34px;
   color:#3f6f9a;
-  margin-top:6px;
 }
 
 /* FORECAST */
@@ -110,7 +107,6 @@ body {
   flex-direction:column;
   align-items:center;
   justify-content:space-around;
-  padding:20px 0;
 }
 
 .panel:last-child {
@@ -120,29 +116,23 @@ body {
 .period {
   font-size:62px;
   font-weight:700;
-  color:#17324d;
-  text-align:center;
 }
 
-/* NOAA official panel icons */
-.icon-img {
-  width:300px;
-  height:auto;
-  display:block;
+.icon {
+  font-size:250px;
+  color:#3f6f9a;
+  animation:pulse 3s ease-in-out infinite;
 }
 
 .temp {
   font-size:62px;
   font-weight:700;
-  color:#0c2b45;
-  text-align:center;
 }
 
-.message {
-  font-size:36px;
-  color:#17324d;
-  text-align:center;
-  padding:40px;
+@keyframes pulse {
+  0% {transform:scale(1);}
+  50% {transform:scale(1.05);}
+  100% {transform:scale(1);}
 }
 </style>
 </head>
@@ -151,85 +141,54 @@ body {
 
 <div class="stage">
 
-  <div class="top">
-    <div class="title">Providence Weather</div>
-    <div class="current" id="current"></div>
-  </div>
+<div class="top">
+  <div class="title">Providence Weather</div>
+  <div class="current" id="current"></div>
+</div>
 
-  <div class="row" id="row"></div>
+<div class="row" id="row"></div>
 
 </div>
 
 <script>
-const LAT = 41.8239;
-const LON = -71.412;
+const LAT=41.8239;
+const LON=-71.412;
 
-/* ---------- helpers ---------- */
-async function getJSON(url) {
-  const res = await fetch(url, {
-    headers: {
-      "Accept": "application/geo+json"
-    }
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.json();
-}
-
-function cToF(c) {
-  if (c === null || c === undefined || Number.isNaN(c)) return null;
-  return Math.round((c * 9 / 5) + 32);
-}
-
-function getNowTime() {
-  const d = new Date();
-  let h = d.getHours();
-  const m = String(d.getMinutes()).padStart(2, "0");
-  const ampm = h >= 12 ? "PM" : "AM";
-  h = h % 12;
-  if (h === 0) h = 12;
+/* time */
+function getNowTime(){
+  const d=new Date();
+  let h=d.getHours();
+  let m=String(d.getMinutes()).padStart(2,"0");
+  let ampm=h>=12?"PM":"AM";
+  h=h%12; if(h===0) h=12;
   return `${h}:${m}${ampm}`;
 }
 
-function formatTime(isoOrString) {
-  const d = new Date(isoOrString);
-  if (!Number.isNaN(d.getTime())) {
-    let h = d.getHours();
-    const m = String(d.getMinutes()).padStart(2, "0");
-    const ampm = h >= 12 ? "PM" : "AM";
-    h = h % 12;
-    if (h === 0) h = 12;
-    return `${h}:${m}${ampm}`;
-  }
-
-  const match = String(isoOrString).match(/(\d{2}):(\d{2})/);
-  if (!match) return String(isoOrString);
-  let h = parseInt(match[1], 10);
-  const m = match[2];
-  const ampm = h >= 12 ? "PM" : "AM";
-  h = h % 12;
-  if (h === 0) h = 12;
-  return `${h}:${m}${ampm}`;
+function formatTime(str){
+  let m=str.match(/(\d{2}):(\d{2})/);
+  if(!m) return str;
+  let h=parseInt(m[1]);
+  let min=m[2];
+  let ampm=h>=12?"PM":"AM";
+  h=h%12; if(h===0) h=12;
+  return `${h}:${min}${ampm}`;
 }
 
-function isDaytimeNow() {
-  const h = new Date().getHours();
-  return h >= 6 && h < 18;
+function isDaytime(){
+  let h=new Date().getHours();
+  return h>=6 && h<18;
 }
 
-/* current icon mapping only */
-function getCurrentIcon(condition, isNight) {
-  const c = String(condition || "").toLowerCase();
+/* ✅ SAFE icon mapping */
+function getIcon(condition,isNight){
 
-  if (
-    c.includes("rain") ||
-    c.includes("shower") ||
-    c.includes("drizzle") ||
-    c.includes("sprinkle")
-  ) return "wi-rain";
+  const c = condition.toLowerCase();
+
+  if (c.includes("rain") || c.includes("shower") || c.includes("drizzle") || c.includes("sprinkle"))
+    return "wi-rain";
 
   if (c.includes("thunder")) return "wi-thunderstorm";
   if (c.includes("snow")) return "wi-snow";
-  if (c.includes("fog") || c.includes("mist") || c.includes("haze")) return "wi-fog";
 
   if (c.includes("cloud"))
     return isNight ? "wi-night-alt-cloudy" : "wi-day-cloudy";
@@ -240,120 +199,75 @@ function getCurrentIcon(condition, isNight) {
   if (c.includes("wind"))
     return isNight ? "wi-night-alt-cloudy" : "wi-day-cloudy";
 
+  if (c.includes("fog"))
+    return "wi-fog";
+
   return isNight ? "wi-night-alt-cloudy" : "wi-day-cloudy";
 }
 
-/* prefer larger official NOAA icon size */
-function largeIconUrl(url) {
-  if (!url) return "";
-  return url.replace("size=medium", "size=large");
-}
+async function load(){
 
-function renderCurrent(currentObs) {
-  const dayNow = isDaytimeNow();
-  const iconClass = getCurrentIcon(currentObs.textDescription, !dayNow);
-  const tempText = currentObs.tempF !== null ? `${currentObs.tempF}°` : "—";
-  const descText = currentObs.textDescription || "Unavailable";
-  const reportedAt = currentObs.timestamp ? formatTime(currentObs.timestamp) : "Unknown";
+const url=`https://forecast.weather.gov/MapClick.php?lat=${LAT}&lon=${LON}&FcstType=json`;
+const data=await fetch(url).then(r=>r.json());
 
-  return `
-    <div class="current-inner">
-      <div class="current-header">
-        Conditions reported at ${reportedAt}
-      </div>
+const names=data.time.startPeriodName;
+const temps=data.data.temperature;
+const conditions=data.data.weather;
+const current=data.currentobservation;
 
-      <div class="updated-time">
-        Updated ${getNowTime()}
-      </div>
+const dayNow=isDaytime();
 
-      <div class="current-row">
-        <i class="wi ${iconClass} current-icon"></i>
+/* CURRENT */
+document.getElementById("current").innerHTML=`
+<div class="current-inner">
 
-        <div class="current-text-block">
-          <div class="current-temp">${tempText}</div>
-          <div class="current-text">${descText}</div>
-        </div>
-      </div>
+  <div class="current-header">
+    Conditions reported at ${formatTime(current.Date)}
+  </div>
+
+  <div class="updated-time">
+    Updated ${getNowTime()}
+  </div>
+
+  <div class="current-row">
+    <i class="wi ${getIcon(current.Weather,!dayNow)} current-icon"></i>
+
+    <div class="current-text-block">
+      <div class="current-temp">${current.Temp}°</div>
+      <div class="current-text">${current.Weather}</div>
     </div>
-  `;
+  </div>
+
+</div>
+`;
+
+/* FORECAST */
+let html="";
+
+for(let i=0;i<3;i++){
+
+  const isNight=names[i].toLowerCase().includes("night");
+
+  html+=`
+  <div class="panel">
+
+    <div class="period">${names[i]}</div>
+
+    <i class="wi ${getIcon(conditions[i],isNight)} icon"></i>
+
+    <div class="temp">
+      ${isNight?"Low":"High"} ${temps[i]}°
+    </div>
+
+  </div>`;
 }
 
-function renderPanels(periods) {
-  return periods.map(period => {
-    const label = period.isDaytime ? "High" : "Low";
-    const iconUrl = largeIconUrl(period.icon);
-
-    return `
-      <div class="panel">
-        <div class="period">${period.name}</div>
-
-        <img src="${iconUrl}" alt="${period.shortForecast}" class="icon-img">
-
-        <div class="temp">
-          ${label} ${period.temperature}°
-        </div>
-      </div>
-    `;
-  }).join("");
+document.getElementById("row").innerHTML=html;
 }
 
-/* ---------- main ---------- */
-async function load() {
-  try {
-    // 1) Get metadata for the point
-    const point = await getJSON(`https://api.weather.gov/points/${LAT},${LON}`);
-
-    // 2) Get forecast periods from the official forecast URL
-    const forecast = await getJSON(point.properties.forecast);
-    const periods = (forecast.properties.periods || []).slice(0, 3);
-
-    // 3) Get current observation from the first listed observation station
-    let currentObs = {
-      tempF: null,
-      textDescription: "Unavailable",
-      timestamp: null
-    };
-
-    if (point.properties.observationStations) {
-      const stations = await getJSON(point.properties.observationStations);
-      const firstStation = stations.features && stations.features[0] && stations.features[0].id;
-
-      if (firstStation) {
-        const latestObs = await getJSON(`${firstStation}/observations/latest`);
-        const props = latestObs.properties || {};
-
-        currentObs = {
-          tempF: props.temperature && typeof props.temperature.value === "number"
-            ? cToF(props.temperature.value)
-            : null,
-          textDescription: props.textDescription || "Unavailable",
-          timestamp: props.timestamp || null
-        };
-      }
-    }
-
-    document.getElementById("current").innerHTML = renderCurrent(currentObs);
-    document.getElementById("row").innerHTML = renderPanels(periods);
-
-  } catch (err) {
-    console.error(err);
-    document.getElementById("current").innerHTML = `
-      <div class="current-inner">
-        <div class="current-header">Current conditions unavailable</div>
-        <div class="updated-time">Updated ${getNowTime()}</div>
-      </div>
-    `;
-    document.getElementById("row").innerHTML = `
-      <div class="message" style="grid-column:1 / -1;">
-        Unable to load forecast right now
-      </div>
-    `;
-  }
-}
-
+/* load + refresh */
 load();
-setInterval(load, 300000);
+setInterval(load,300000);
 </script>
 
-</body>
-</html>
+</body
